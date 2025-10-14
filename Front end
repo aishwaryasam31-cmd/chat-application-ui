@@ -1,0 +1,124 @@
+import React, { useState, useEffect } from "react";
+import io from "socket.io-client";
+
+const socket = io("http://localhost:5000"); // backend address
+
+export default function ChatApp() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+
+  useEffect(() => {
+    // Listen for messages from server
+    socket.on("receiveMessage", (data) => {
+      setMessages((prev) => [...prev, data]);
+    });
+
+    return () => socket.off("receiveMessage");
+  }, []);
+
+  function getTime() {
+    const now = new Date();
+    return now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function handleSend() {
+    if (input.trim() === "") return;
+
+    const messageData = {
+      text: input,
+      time: getTime(),
+      isSender: true,
+    };
+
+    setMessages((prev) => [...prev, messageData]);
+    socket.emit("sendMessage", { ...messageData, isSender: false }); // send to server
+    setInput("");
+  }
+
+  return (
+    <div
+      style={{
+        width: "400px",
+        margin: "60px auto",
+        fontFamily: "Poppins, sans-serif",
+      }}
+    >
+      <h2 style={{ textAlign: "center", color: "#0078FF" }}>💬 Live Chat</h2>
+      <div
+        style={{
+          height: "360px",
+          overflowY: "auto",
+          border: "1px solid #ddd",
+          padding: "16px",
+          background: "#fefefe",
+          borderRadius: "12px",
+          boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+          marginBottom: "10px",
+        }}
+      >
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              justifyContent: msg.isSender ? "flex-end" : "flex-start",
+              marginBottom: "10px",
+            }}
+          >
+            <div
+              style={{
+                background: msg.isSender ? "#0078FF" : "#EAEAEA",
+                color: msg.isSender ? "#fff" : "#000",
+                padding: "10px 14px",
+                borderRadius: "16px",
+                maxWidth: "70%",
+              }}
+            >
+              {msg.text}
+              <div
+                style={{
+                  fontSize: "10px",
+                  textAlign: "right",
+                  opacity: 0.7,
+                  marginTop: "4px",
+                }}
+              >
+                {msg.time}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex" }}>
+        <input
+          type="text"
+          placeholder="Type a message..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          style={{
+            flex: 1,
+            padding: "10px",
+            borderRadius: "10px",
+            border: "1px solid #ccc",
+            outline: "none",
+          }}
+        />
+        <button
+          onClick={handleSend}
+          style={{
+            marginLeft: "10px",
+            padding: "10px 16px",
+            borderRadius: "10px",
+            background: "#0078FF",
+            color: "#fff",
+            border: "none",
+          }}
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}
